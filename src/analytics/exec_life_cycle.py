@@ -2,6 +2,7 @@
 
 import pandas as pd
 import sqlalchemy
+from sqlalchemy.exc import OperationalError
 # %%
 
 def import_query(path):
@@ -11,15 +12,59 @@ def import_query(path):
 
 query = import_query('life_cycle.sql')
 
+# %%
+
 engine_app = sqlalchemy.create_engine('sqlite:///../../data/loyalty_system/database.db')
 
-df = pd.read_sql(query, engine_app)
+engine_analytical = sqlalchemy.create_engine('sqlite:///../../data/analytics/database.db')
 
 # %%
 
-engine_analytical = sqlalchemy.create_engine('sqlite:///../../data/analytics/databse.db')
+dates = [
+    '2024-05-01',
+    '2024-06-01',
+    '2024-07-01',
+    '2024-08-01',
+    '2024-09-01',
+    '2024-10-01',
+    '2024-11-01',
+    '2024-12-01',
+    '2025-01-01',
+    '2025-02-01',
+    '2025-03-01',
+    '2025-04-01',
+    '2025-05-01',
+    '2025-06-01',
+    '2025-07-01',
+    '2025-08-01',
+    '2025-09-01',
+    '2025-10-01',
+    '2025-11-01',
+    '2025-12-01',
+    '2026-01-01',
+    '2026-02-01',
+    '2026-03-01',
+    '2026-04-01',
+    '2026-05-01',
+    '2026-06-01',
+    '2026-07-01',
+    '2026-08-01',
+    '2026-09-01',
+    '2026-10-01',
+    '2026-11-01'
+]
 
-df.to_sql('life_cycle', engine_analytical, index=False, if_exists="replace")
+for i in dates:
+    
+    with engine_analytical.connect() as con:
+        try:
+            query_delete = f"DELETE FROM life_cycle WHERE dtRef = date('{i}', '-1 day')"
+            con.execute(sqlalchemy.text(query_delete))
+            con.commit()
+        except OperationalError:
+            pass
 
-# %%
-
+    print(i)
+    query_format = query.format(date=i)
+    df = pd.read_sql(query_format, engine_app)
+    df.to_sql('life_cycle', engine_analytical, index=False, if_exists="append")
